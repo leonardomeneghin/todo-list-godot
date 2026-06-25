@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" uid="uid://dg32wjda7t3gi" path="res://addons/todo-list-godot/editor-scan/editor_scan.gd" id="1_grpe1"]
 
-[node name="EditorScan" type="Node" unique_id=768226264]
+[node name="EditorScan" type="Node" unique_id=1130308516]
 script = ExtResource("1_grpe1")

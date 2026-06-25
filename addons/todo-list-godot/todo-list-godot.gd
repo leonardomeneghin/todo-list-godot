@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 # @icon("path/to/icon.svg")
-const dock_scene = preload("res://addons/todo-list-godot/list-view/list-dock.tscn")
+const dock_scene = preload("res://addons/todo-list-godot/list-view/list-view.tscn")
 const title: String = "TODO-List"
 var dock # membro da classe que guarda o comportamento do dock durante o ciclo de vida do plugin
 
