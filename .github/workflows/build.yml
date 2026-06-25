@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4
-
+ 
       - name: Confere se a pasta do addon existe
         run: |
           if [ ! -d "${{ env.ADDON_PATH }}" ]; then
@@ -36,20 +36,21 @@ jobs:
             echo "❌ plugin.cfg não encontrado em ${{ env.ADDON_PATH }}. Isso não parece um addon válido."
             exit 1
           fi
-
+ 
       - name: Cria o zip do addon
         run: |
           mkdir -p build
           ADDON_DIR_NAME=$(basename "${{ env.ADDON_PATH }}")
-          zip -r "${{ github.workspace }}/build/addons.zip" addons \
+          cd "${{ env.ADDON_PATH }}/.."
+          zip -r "${{ github.workspace }}/build/${{ env.ADDON_NAME }}.zip" "$ADDON_DIR_NAME" \
             -x "*.import" -x "*.uid" -x "*.tmp"
-
+ 
       - name: Faz upload do artefato (entre jobs)
         uses: actions/upload-artifact@v4
         with:
           name: addon-zip
           path: build/${{ env.ADDON_NAME }}.zip
-
+ 
   release-github:
     name: 🏷️ Cria Release no GitHub
     needs: package-addon
@@ -64,13 +65,13 @@ jobs:
         with:
           name: addon-zip
           path: build
-
+ 
       - name: Cria a Release com o zip anexado
         uses: softprops/action-gh-release@v2
         with:
-          files: build/addons.zip
+          files: build/${{ env.ADDON_NAME }}.zip
           generate_release_notes: true
-
+ 
   deploy-itchio:
     name: 🚀 Deploy para itch.io
     needs: package-addon
@@ -83,16 +84,16 @@ jobs:
         with:
           name: addon-zip
           path: build
-
+ 
       - name: Instala o butler
         run: |
           curl -L -o butler.zip ${{ env.URL_BUTLER_ITCH }}
           unzip butler.zip
           chmod +x butler
-
+ 
       - name: Deploy do addon para itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.API_KEY_ITCH }}
         run: |
-          ./butler push build/addons.zip \
+          ./butler push build/${{ env.ADDON_NAME }}.zip \
             ${{ env.ITCH_USER_NAME }}/${{ env.ITCH_GAME_NAME }}:addon
