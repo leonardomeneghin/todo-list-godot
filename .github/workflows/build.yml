@@ -9,6 +9,8 @@ on:
       - main
 
 env:
+  LINUX_NAME: "Linux"
+  WINDOWS_NAME: "Windows"
   GODOT_VERSION: "4.7"
   EXPORT_NAME: "todo-list-godot-plugin"
   ITCH_USER_NAME: "meneghin"
@@ -64,7 +66,7 @@ jobs:
       - name: Exporta para Linux
         run: |
           ./godot --headless \
-            --export-release "Linux/X11" \
+            --export-release ${{env.LINUX_NAME}} \
             build/linux/${{ env.EXPORT_NAME }}.x86_64
 
       - name: Faz upload do artefato
@@ -119,7 +121,7 @@ jobs:
       - name: Exporta para Windows
         run: |
           ./godot --headless \
-            --export-release "Windows Desktop" \
+            --export-release ${{env.WINDOWS_NAME}} \
             build/windows/${{ env.EXPORT_NAME }}.exe
 
       - uses: actions/upload-artifact@v4
