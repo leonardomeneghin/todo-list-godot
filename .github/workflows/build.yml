@@ -94,5 +94,5 @@ jobs:
         env:
           BUTLER_API_KEY: ${{ secrets.API_KEY_ITCH }}
         run: |
-          ./butler push build/${{ env.ADDON_NAME }}.zip \
+          ./butler push build/addons.zip \
             ${{ env.ITCH_USER_NAME }}/${{ env.ITCH_GAME_NAME }}:addon
