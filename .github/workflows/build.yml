@@ -1,0 +1,175 @@
+name: Bee the bee
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  GODOT_VERSION: "4.7"
+  EXPORT_NAME: "todo-list-godot-plugin"
+  ITCH_USER_NAME: "meneghin"
+  URL_BUTLER_ITCH: "https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default"
+
+jobs:
+  build-linux:
+    name: 🐧 Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Cache dos Export Templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Instala dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+
+      - name: Instala o butler
+        run: |
+          curl -L -o butler.zip ${{env.URL_BUTLER_ITCH}}
+          unzip butler.zip
+          chmod +x butler
+
+      - name: Baixa o Godot (LINUX)
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
+          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
+          mv Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Baixa os Export Templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
+          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/
+      # abre o projeto via CLI sem interface do editor
+      - name: Importa o projeto
+        run: ./godot --headless --editor --quit || true
+
+      #Cria a pasta onde será feito o deploy final
+      - name: Cria pasta de output
+        run: mkdir -p build/linux
+
+      - name: Exporta para Linux
+        run: |
+          ./godot --headless \
+            --export-release "Linux/X11" \
+            build/linux/${{ env.EXPORT_NAME }}.x86_64
+
+      - name: Faz upload do artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: build/linux/
+
+
+  build-windows:
+    name: 🪟 Build Windows
+    runs-on: ubuntu-latest   # pode buildar Windows a partir do Linux!
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Instala dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+
+      - name: Instala o butler
+        run: |
+          curl -L -o butler.zip ${{env.URL_BUTLER_ITCH}}
+          unzip butler.zip
+          chmod +x butler
+
+      - name: Baixa o Godot (WINDOWS)
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
+          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
+          mv Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Baixa os Export Templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
+          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/
+
+      #Cria a pasta onde será feito o deploy final
+      - name: Cria pasta de output
+        run: mkdir -p build/windows
+
+      - name: Exporta para Windows
+        run: |
+          ./godot --headless \
+            --export-release "Windows Desktop" \
+            build/windows/${{ env.EXPORT_NAME }}.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: build/windows/
+
+  deploy-itchio:
+    name: 🚀 Deploy para itch.io
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    # Só faz deploy quando for push na main ou PRs na main
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        || (github.event_name == 'pull_request' && github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Baixa build Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: build/linux
+
+      - name: Baixa build Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: build/windows
+
+      - name: Instala o butler
+        run: |
+          curl -L -o butler.zip ${{env.URL_BUTLER_ITCH}}
+          unzip butler.zip
+          chmod +x butler
+
+      - name: Deploy Linux para itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.API_KEY_ITCH }}
+        run: |
+            pushd build/linux
+            zip -r ../../${{env.EXPORT_NAME}}-linux.zip .
+            popd
+            ./butler push ${{env.EXPORT_NAME}}-linux.zip \
+            ${{ env.ITCH_USER_NAME }}/${{ env.EXPORT_NAME }}:linux
+
+      - name: Deploy Windows para itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.API_KEY_ITCH }}
+        run: |
+            pushd build/windows
+            zip -r ../../${{ env.EXPORT_NAME }}-windows.zip .
+            popd
+            ./butler push ${{ env.EXPORT_NAME }}-windows.zip \
+            ${{ env.ITCH_USER_NAME }}/${{ env.EXPORT_NAME }}:windows

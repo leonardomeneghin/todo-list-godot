@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://b161u8saqlfh5"]
+
+[ext_resource type="PackedScene" uid="uid://dnyjixxdpxyvr" path="res://addons/todo-list-godot/editor-scan/editor_scan.tscn" id="2_3mj38"]
+
+[node name="list-dock" type="VBoxContainer" unique_id=1562078660]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="EditorScan" parent="." unique_id=768226264 instance=ExtResource("2_3mj38")]
+
+[node name="Button" type="Button" parent="." unique_id=1458786012]
+layout_mode = 2
