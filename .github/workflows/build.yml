@@ -41,8 +41,7 @@ jobs:
         run: |
           mkdir -p build
           ADDON_DIR_NAME=$(basename "${{ env.ADDON_PATH }}")
-          cd "${{ env.ADDON_PATH }}/.."
-          zip -r "${{ github.workspace }}/build/${{ env.ADDON_NAME }}.zip" "$ADDON_DIR_NAME" \
+          zip -r "${{ github.workspace }}/build/addons.zip" "$ADDON_DIR_NAME" \
             -x "*.import" -x "*.uid" -x "*.tmp"
 
       - name: Faz upload do artefato (entre jobs)
