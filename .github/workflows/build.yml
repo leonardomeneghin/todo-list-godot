@@ -1,177 +1,99 @@
-name: Bee the bee
+name: Todo list godot
 
 on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
 
 env:
-  LINUX_NAME: "Linux"
-  WINDOWS_NAME: "Windows"
-  GODOT_VERSION: "4.7"
-  EXPORT_NAME: "todo-list-godot-plugin"
+  # Ajuste para o caminho real da pasta do seu addon dentro de addons/
+  ADDON_PATH: "addons/todo-list-godot"
+  ADDON_NAME: "todo-list-godot"
   ITCH_USER_NAME: "meneghin"
+  ITCH_GAME_NAME: "todo-list-godot-plugin"
   URL_BUTLER_ITCH: "https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default"
 
 jobs:
-  build-linux:
-    name: 🐧 Build Linux
+  package-addon:
+    name: 📦 Empacota o addon
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4
-
-      - name: Cache dos Export Templates
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/godot/export_templates
-          key: godot-templates-${{ env.GODOT_VERSION }}
-
-      - name: Instala dependências
+ 
+      - name: Confere se a pasta do addon existe
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-
-      - name: Instala o butler
+          if [ ! -d "${{ env.ADDON_PATH }}" ]; then
+            echo "❌ Pasta ${{ env.ADDON_PATH }} não encontrada. Ajuste a env ADDON_PATH no workflow."
+            exit 1
+          fi
+          if [ ! -f "${{ env.ADDON_PATH }}/plugin.cfg" ]; then
+            echo "❌ plugin.cfg não encontrado em ${{ env.ADDON_PATH }}. Isso não parece um addon válido."
+            exit 1
+          fi
+ 
+      - name: Cria o zip do addon
         run: |
-          curl -L -o butler.zip ${{env.URL_BUTLER_ITCH}}
-          unzip butler.zip
-          chmod +x butler
-
-      - name: Baixa o Godot (LINUX)
-        run: |
-          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
-          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
-          mv Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64 godot
-          chmod +x godot
-
-      - name: Baixa os Export Templates
-        run: |
-          mkdir -p ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
-          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
-          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
-          mv templates/* ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/
-      # abre o projeto via CLI sem interface do editor
-      - name: Importa o projeto
-        run: ./godot --headless --editor --quit || true
-
-      #Cria a pasta onde será feito o deploy final
-      - name: Cria pasta de output
-        run: mkdir -p build/linux
-
-      - name: Exporta para Linux
-        run: |
-          ./godot --headless \
-            --export-release ${{env.LINUX_NAME}} \
-            build/linux/${{ env.EXPORT_NAME }}.x86_64
-
-      - name: Faz upload do artefato
+          mkdir -p build
+          ADDON_DIR_NAME=$(basename "${{ env.ADDON_PATH }}")
+          cd "${{ env.ADDON_PATH }}/.."
+          zip -r "${{ github.workspace }}/build/${{ env.ADDON_NAME }}.zip" "$ADDON_DIR_NAME" \
+            -x "*.import" -x "*.uid" -x "*.tmp"
+ 
+      - name: Faz upload do artefato (entre jobs)
         uses: actions/upload-artifact@v4
         with:
-          name: linux-build
-          path: build/linux/
-
-
-  build-windows:
-    name: 🪟 Build Windows
-    runs-on: ubuntu-latest   # pode buildar Windows a partir do Linux!
-
+          name: addon-zip
+          path: build/${{ env.ADDON_NAME }}.zip
+ 
+  release-github:
+    name: 🏷️ Cria Release no GitHub
+    needs: package-addon
+    runs-on: ubuntu-latest
+    # só cria release quando você empurrar uma tag tipo v1.0.0
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
-
-      - uses: actions/checkout@v4
-
-      - uses: actions/cache@v4
+      - name: Baixa o zip do addon
+        uses: actions/download-artifact@v4
         with:
-          path: ~/.local/share/godot/export_templates
-          key: godot-templates-${{ env.GODOT_VERSION }}
-
-      - name: Instala dependências
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-
-      - name: Instala o butler
-        run: |
-          curl -L -o butler.zip ${{env.URL_BUTLER_ITCH}}
-          unzip butler.zip
-          chmod +x butler
-
-      - name: Baixa o Godot (WINDOWS)
-        run: |
-          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
-          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
-          mv Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64 godot
-          chmod +x godot
-
-      - name: Baixa os Export Templates
-        run: |
-          mkdir -p ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
-          wget -q https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
-          unzip -q Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
-          mv templates/* ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/
-
-      #Cria a pasta onde será feito o deploy final
-      - name: Cria pasta de output
-        run: mkdir -p build/windows
-
-      - name: Exporta para Windows
-        run: |
-          ./godot --headless \
-            --export-release ${{env.WINDOWS_NAME}} \
-            build/windows/${{ env.EXPORT_NAME }}.exe
-
-      - uses: actions/upload-artifact@v4
+          name: addon-zip
+          path: build
+ 
+      - name: Cria a Release com o zip anexado
+        uses: softprops/action-gh-release@v2
         with:
-          name: windows-build
-          path: build/windows/
-
+          files: build/${{ env.ADDON_NAME }}.zip
+          generate_release_notes: true
+ 
   deploy-itchio:
     name: 🚀 Deploy para itch.io
-    needs: [build-linux, build-windows]
+    needs: package-addon
     runs-on: ubuntu-latest
-    # Só faz deploy quando for push na main ou PRs na main
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        || (github.event_name == 'pull_request' && github.ref == 'refs/heads/main')
-
+    # só faz deploy em push direto na main (não em PR)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Baixa build Linux
+      - name: Baixa o zip do addon
         uses: actions/download-artifact@v4
         with:
-          name: linux-build
-          path: build/linux
-
-      - name: Baixa build Windows
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-build
-          path: build/windows
-
+          name: addon-zip
+          path: build
+ 
       - name: Instala o butler
         run: |
-          curl -L -o butler.zip ${{env.URL_BUTLER_ITCH}}
+          curl -L -o butler.zip ${{ env.URL_BUTLER_ITCH }}
           unzip butler.zip
           chmod +x butler
-
-      - name: Deploy Linux para itch.io
+ 
+      - name: Deploy do addon para itch.io
         env:
           BUTLER_API_KEY: ${{ secrets.API_KEY_ITCH }}
         run: |
-            pushd build/linux
-            zip -r ../../${{env.EXPORT_NAME}}-linux.zip .
-            popd
-            ./butler push ${{env.EXPORT_NAME}}-linux.zip \
-            ${{ env.ITCH_USER_NAME }}/${{ env.EXPORT_NAME }}:linux
-
-      - name: Deploy Windows para itch.io
-        env:
-          BUTLER_API_KEY: ${{ secrets.API_KEY_ITCH }}
-        run: |
-            pushd build/windows
-            zip -r ../../${{ env.EXPORT_NAME }}-windows.zip .
-            popd
-            ./butler push ${{ env.EXPORT_NAME }}-windows.zip \
-            ${{ env.ITCH_USER_NAME }}/${{ env.EXPORT_NAME }}:windows
+          ./butler push build/${{ env.ADDON_NAME }}.zip \
+            ${{ env.ITCH_USER_NAME }}/${{ env.ITCH_GAME_NAME }}:addon
