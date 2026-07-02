@@ -1,6 +1,9 @@
 [gd_scene format=3 uid="uid://dnyjixxdpxyvr"]
 
 [ext_resource type="Script" uid="uid://dg32wjda7t3gi" path="res://addons/todo-list-godot/editor-scan/editor_scan.gd" id="1_grpe1"]
+[ext_resource type="PackedScene" uid="uid://dq2ga88qgq2jp" path="res://addons/todo-list-godot/regex-scan/regex_scan.tscn" id="2_afjm4"]
 
 [node name="EditorScan" type="Node" unique_id=1130308516]
 script = ExtResource("1_grpe1")
+
+[node name="RegexScan" parent="." unique_id=1198485177 instance=ExtResource("2_afjm4")]

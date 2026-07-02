@@ -1,16 +1,19 @@
 [gd_scene format=3 uid="uid://c0b5r7t4ng7lm"]
 
 [ext_resource type="PackedScene" uid="uid://dnyjixxdpxyvr" path="res://addons/todo-list-godot/editor-scan/editor_scan.tscn" id="1_bsjfw"]
+[ext_resource type="Script" uid="uid://brw34nrop06s6" path="res://addons/todo-list-godot/list-view/list_view.gd" id="1_byrua"]
+[ext_resource type="PackedScene" uid="uid://70f8l643xyke" path="res://addons/todo-list-godot/prefabs/button.tscn" id="3_m46ve"]
 
-[node name="ListView" type="VBoxContainer" unique_id=874967956]
+[node name="TreeView" type="VBoxContainer" unique_id=874967956 node_paths=PackedStringArray("editor_scan")]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_byrua")
+editor_scan = NodePath("EditorScan")
 
 [node name="EditorScan" parent="." unique_id=1130308516 instance=ExtResource("1_bsjfw")]
 
-[node name="Button" type="Button" parent="." unique_id=1713362677]
+[node name="Line" parent="." unique_id=2140794261 instance=ExtResource("3_m46ve")]
 layout_mode = 2
-text = "Programar o regex para encontrar os TODOs"

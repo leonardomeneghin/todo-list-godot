@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://70f8l643xyke"]
+
+[node name="Line" type="Button" unique_id=2140794261]
+text = "TODO: Implementar o dicionário e a rotina de scan do TODO list, avisando o treeview e atualizando a UI"
+autowrap_mode = 2

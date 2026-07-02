@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dq2ga88qgq2jp"]
+
+[ext_resource type="Script" uid="uid://2g6fhnnu3j4" path="res://addons/todo-list-godot/regex-scan/regex_scan.gd" id="1_l753f"]
+
+[node name="RegexScan" type="Node" unique_id=1198485177]
+script = ExtResource("1_l753f")
